@@ -1,0 +1,39 @@
+MOVIMENTACAO DE INVENTARIO - LEIA-ME
+====================================
+
+O que e: o painel que mostra tudo o que mexe no estoque do galpao, a partir de
+duas rotinas do WinThor:
+  - 266  Bloquear Produtos no Estoque (livro PCLOGDESBLOQUEIO: bloqueio,
+         desbloqueio, avaria, devolucao que entra bloqueada, liberacao do WMS)
+  - 1147 Manutencao de inventario rotativo (o que foi contado, sobra e falta)
+
+Caminho: WinThor (Oracle) -> ETL em Python (VM SRV-IA) -> Supabase, projeto
+DATA WAREHOUSE, schema "inventario" -> painel na Vercel.
+
+PASTAS
+  1 - CONFIGURACAO     ENV (senhas - NUNCA compartilhe) e ENV.example
+  2 - SISTEMA INVENTARIO   os scripts do ETL
+  3 - INSTALACAO       instalar_e_agendar.ps1 (chamado pelo INSTALAR TUDO.bat)
+
+O QUE CADA ARQUIVO FAZ
+  INSTALAR TUDO.bat    uma vez, NA VM SRV-IA: copia o ETL para C:\BI\INVENTARIO,
+                       cria a tarefa "Inventario - Sync" e roda uma carga de teste.
+  ATUALIZAR AGORA.bat  a qualquer hora, na SRV-IA: copia o ETL mais novo e roda
+                       uma carga. Nao mexe no agendamento.
+  DIAGNOSTICO.bat      roda tudo sem gravar e confere a 1147 contra o PCMOV.
+
+HORARIOS DA CARGA
+  07:05, 09:05, 11:05, 13:05, 15:05, 17:05, 19:05 e 22:05
+  (aos :05 de proposito: Trade :25, Reposicoes :35, Comercial :45, Compras :50)
+
+A CARGA ENTROU?
+  Nao confie no log da tela. Consulte inventario.controle_carga no Supabase
+  (projeto DATA WAREHOUSE). Cada carga grava uma linha por passo, mais a
+  "conferencia_1147" (1147 x PCMOV) e o "pacote" do painel.
+
+SE ALGO FALHAR
+  - "a tarefa rodou e nada aconteceu": veja C:\BI\INVENTARIO\falha_inicial.log
+  - depois, o log do Agendador (Visualizador de Eventos > Microsoft > Windows >
+    TaskScheduler > Operational)
+  - mudou algum script aqui na rede? rode o ATUALIZAR AGORA.bat (ou o INSTALAR
+    TUDO.bat de novo): a maquina nao se atualiza sozinha.

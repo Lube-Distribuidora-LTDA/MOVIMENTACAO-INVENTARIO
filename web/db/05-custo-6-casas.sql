@@ -1,0 +1,6 @@
+-- =============================================================================
+-- Migração inventario_05_custo_6_casas (2026-10-19)
+-- O custo vai no pacote com 6 casas (as do WinThor), não 4: com 4, o valor dos
+-- bloqueios de 2026 da filial 1 dava R$ 6 de diferença em R$ 3,03 mi contra o banco.
+-- Definição vigente da função: 02-views-e-funcao.sql.
+-- =============================================================================

@@ -1,0 +1,7 @@
+-- =============================================================================
+-- Migração inventario_03_fotos (2026-10-19)
+-- inventario.painel_dados() passa a dizer quais produtos têm foto ("fotos"), lendo
+-- trade.produto_miniatura (a miniatura que o Gestão Comercial guarda). Só leitura:
+-- este sistema não escreve no schema trade. A função api/img serve a foto de lá.
+-- A definição vigente da função está em 02-views-e-funcao.sql.
+-- =============================================================================

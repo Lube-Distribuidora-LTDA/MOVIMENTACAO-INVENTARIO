@@ -1,0 +1,15 @@
+{
+  "name": "movimentacao-inventario",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Movimentacao de Inventario (rotinas 266 e 1147 do WinThor) - Lube Distribuidora",
+  "scripts": {
+    "start": "node servidor_local.js"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}

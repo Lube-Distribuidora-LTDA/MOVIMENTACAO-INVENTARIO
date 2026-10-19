@@ -1,0 +1,7 @@
+-- =============================================================================
+-- Migração inventario_04_estoque_completo (2026-10-19)
+-- painel_dados() passa a mandar TODAS as linhas de inventario.fato_posicao em "est"
+-- (antes, só as com bloqueio ou com movimento): o "% do estoque que está bloqueado"
+-- usava como base só o estoque dos produtos bloqueados (dava 27%, errado).
+-- Definição vigente da função: 02-views-e-funcao.sql.
+-- =============================================================================

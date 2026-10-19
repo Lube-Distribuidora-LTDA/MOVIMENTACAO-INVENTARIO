@@ -1,0 +1,6 @@
+-- =============================================================================
+-- Migração inventario_06_ajuste_cheio (2026-10-19)
+-- O valor do ajuste da 1147 vai cheio no pacote (6 casas), não arredondado a 2 casas
+-- por linha: a soma de 2026 dava R$ 640.588,70 contra R$ 640.588,65 do WinThor.
+-- Definição vigente da função: 02-views-e-funcao.sql.
+-- =============================================================================

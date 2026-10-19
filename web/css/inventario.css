@@ -1,0 +1,85 @@
+/* =============================================================================
+   Movimentação de Inventário — o que este painel acrescenta à base (base.css,
+   a mesma da Gestão Comercial): feed de movimentos, mapa de calor, análise livre,
+   avisos, etiquetas de tipo e o seletor de datas.
+   ========================================================================== */
+#conteudo { position: relative; }
+
+/* ------------------------------ faixa de filtros ------------------------------ */
+.fx-datas .rot-per { font: 700 12px var(--f-num); }
+.fx-hoje { display: inline-flex; align-items: center; gap: 8px; font: 600 12.5px var(--f-txt); color: var(--t2); background: var(--s1); border: 1px solid var(--linha); border-radius: 10px; height: 34px; padding: 0 12px; }
+.fx-hoje svg { width: 14px; height: 14px; stroke: var(--ouro); fill: none; stroke-width: 2; }
+.pilula.fora { opacity: .45; filter: grayscale(.6); }
+.pop mark, .pop-item mark { background: var(--ouro-dim); color: var(--ouro-forte); border-radius: 3px; padding: 0 1px; }
+.pop-item .foto-mini { width: 28px; height: 28px; border-radius: 7px; }
+.pop-datas .pop-lista { display: grid; gap: 10px; padding: 12px; }
+.campo-data { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 10px; font: 700 11px var(--f-txt); letter-spacing: .1em; text-transform: uppercase; color: var(--t3); }
+.campo-data input { height: 36px; border-radius: 10px; border: 1px solid var(--linha); background: var(--s1); color: var(--t1); padding: 0 10px; font: 600 13px var(--f-num); color-scheme: inherit; }
+.campo-data input:focus { outline: 0; border-color: var(--ouro-linha); }
+.atalhos-mes { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+
+/* ------------------------------ avisos ------------------------------ */
+.aviso-faixa { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; font: 500 13px/1.5 var(--f-txt); color: var(--t2); }
+.aviso-faixa > svg { width: 20px; height: 20px; fill: none; stroke-width: 2; flex: none; }
+.aviso-faixa > span { flex: 1; } .aviso-faixa b { color: var(--t1); }
+.aviso-faixa.atencao { background: var(--atencao-bg); border: 1px solid color-mix(in srgb, var(--atencao) 42%, transparent); }
+.aviso-faixa.atencao > svg { stroke: var(--atencao); }
+.vazio.grande { padding: 70px 18px 24px; font-size: 14px; }
+.vazio.grande b { font-size: 18px; margin-bottom: 8px; }
+
+/* ------------------------------ etiqueta do tipo de movimento ------------------------------ */
+.tag.tipo { background: color-mix(in srgb, var(--c) 18%, transparent); color: color-mix(in srgb, var(--c) 82%, var(--t1)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent); text-transform: none; letter-spacing: .01em; font-size: 11px; white-space: nowrap; }
+
+/* ------------------------------ feed dos últimos movimentos ------------------------------ */
+.feed { display: grid; gap: 2px; max-height: 560px; overflow: auto; margin: 0 -6px; padding: 0 6px; }
+.feed-dia { position: sticky; top: 0; z-index: 2; font: 800 10.5px var(--f-txt); letter-spacing: .16em; text-transform: uppercase; color: var(--ouro); padding: 10px 4px 6px; background: var(--s1); }
+.feed-item { display: grid; grid-template-columns: 40px auto 38px minmax(0, 1fr) auto 76px; align-items: center; gap: 10px; border: 0; background: transparent; color: inherit; text-align: left; padding: 7px 6px; border-radius: 10px; transition: background .15s; }
+.feed-item:hover { background: var(--s2); }
+.feed-hora { font: 700 12px var(--f-num); color: var(--t3); }
+.feed-prod { min-width: 0; display: grid; }
+.feed-prod b { font: 600 13px var(--f-txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feed-prod small { font: 500 11.5px var(--f-txt); color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feed-qt { font: 700 12.5px var(--f-num); text-align: right; white-space: nowrap; }
+.feed-qt small { color: var(--t3); font-weight: 600; font-size: 10.5px; }
+.feed-qt i { font-style: normal; font-size: 10px; margin-right: 4px; }
+.feed-qt .seta-e { color: var(--d5); } .feed-qt .seta-s { color: var(--d4); }
+.feed-val { font: 700 12.5px var(--f-num); text-align: right; color: var(--t2); }
+@media (max-width: 760px) { .feed-item { grid-template-columns: 40px 38px minmax(0, 1fr) auto; } .feed-tipo, .feed-val { display: none; } }
+
+/* ------------------------------ mapa de calor ------------------------------ */
+.calor-box { overflow-x: auto; }
+table.calor { width: 100%; border-collapse: separate; border-spacing: 3px; font: 600 11px var(--f-num); }
+.calor th { color: var(--t3); font: 700 10px var(--f-num); padding: 4px 1px; text-align: center; }
+.calor tbody th { text-align: left; padding-right: 8px; font: 800 12px var(--f-txt); color: var(--t2); text-transform: capitalize; }
+.calor td { text-align: center; padding: 8px 0; border-radius: 6px; transition: transform .12s, box-shadow .12s; min-width: 24px; font-size: 10.5px; }
+.calor-box.interativo td { cursor: pointer; }
+.calor-box.interativo td:hover { transform: scale(1.08); box-shadow: 0 0 0 2px var(--ouro); }
+
+/* ------------------------------ análise livre ------------------------------ */
+.analise-ctl.painel { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: flex-start; gap: 14px; padding: 14px 18px; margin-bottom: 16px; }
+.ctl { display: grid; gap: 6px; font: 700 10.5px var(--f-txt); letter-spacing: .14em; text-transform: uppercase; color: var(--t3); }
+.sel { height: 38px; min-width: 210px; border-radius: 10px; border: 1px solid var(--linha); background: var(--s2); color: var(--t1); padding: 0 10px; font: 600 13px var(--f-txt); text-transform: none; letter-spacing: 0; }
+.sel:focus { outline: 0; border-color: var(--ouro-linha); }
+.tabela.pivo td.num-cel { cursor: pointer; }
+.tabela.pivo td.num-cel:hover { box-shadow: inset 0 0 0 2px var(--ouro); }
+.tabela.pivo td.f1 { cursor: pointer; max-width: 380px; }
+.tabela.pivo td.f1:hover { color: var(--ouro-forte); }
+.tabela.pivo .tot { font-weight: 800; background: color-mix(in srgb, var(--ouro-dim) 60%, var(--s1)); }
+.tabela.pivo th.tot { color: var(--ouro-forte); }
+.tabela.pivo tfoot td { font-family: var(--f-num); text-align: right; }
+.tabela.pivo tfoot td.f1 { text-align: left; font-family: var(--f-txt); }
+
+/* ------------------------------ cartões: seis numa linha sem cortar o número ------------------------------ */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); }
+.kpis > .kpi, .kpis > .kpi.heroi { flex: none; min-width: 0; }
+.kpi { padding: 15px 15px 13px; }
+.kpi .val { font-size: clamp(17px, 1.32vw, 23px); }
+.kpi .rot { letter-spacing: .1em; }
+.cmp-linha small { font-size: 11px; }
+
+/* ------------------------------ miúdos ------------------------------ */
+.mais-itens { display: flex; justify-content: flex-end; margin-top: 8px; }
+.menu-rodape .versao { margin-top: 4px; opacity: .7; font-family: var(--f-num); font-size: 10.5px; }
+.btn-ic.girando svg { animation: gira 1s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+.kpi .leg span { overflow-wrap: anywhere; }
