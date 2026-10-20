@@ -59,19 +59,19 @@ L.delta = function (cfg) {
   var valor = pp ? x / 100 : x;
   var sobe = valor > 0.0005, desce = valor < -0.0005;
   var bom = cfg.inverso ? desce : sobe, ruim = cfg.inverso ? sobe : desce;
-  el.className = "delta " + (bom ? "up" : ruim ? "down" : "neutro");
+  el.className = "delta " + (cfg.neutro ? "neutro" : bom ? "up" : ruim ? "down" : "neutro");   // neutro: subir não é bom nem ruim
   el.innerHTML = (sobe ? L.ic("setaCima") : desce ? L.ic("setaBaixo") : "") + (pp ? (valor > 0 ? "+" : valor < 0 ? "−" : "") + L.fNum(Math.abs(x), 1) + " p.p." : L.fDelta(valor, 1));
   return el;
 };
 
 /* linha de comparação de um KPI: "▲ 12,3% vs período anterior (01/09 a 30/09)" — clicar abre o período comparado.
-   cfg: { atual, pa, aa, cmp: L.comparacoes(...), fmt, inverso, pp } */
+   cfg: { atual, pa, aa, cmp: L.comparacoes(...), fmt, inverso, pp, neutro } */
 L.cmpKpi = function (cfg) {
   var linha = L.h("div", { class: "cmp-linha" });
   function item(base, info, rot) {
     if (!info) return;
     if (base == null || (!base && !cfg.atual)) { linha.appendChild(L.h("small", { text: "sem dados " + rot.replace("vs ", "no ") })); return; }
-    var chip = L.delta({ atual: cfg.atual, base: base, inverso: cfg.inverso, pp: cfg.pp });
+    var chip = L.delta({ atual: cfg.atual, base: base, inverso: cfg.inverso, pp: cfg.pp, neutro: cfg.neutro });
     var tx = L.h("small", { class: "link", text: (rot === "vs ano anterior" ? "vs ano ant." : "vs anterior") + " · " + (info.curto || info.rot), title: rot + " (" + info.rot + "): " + cfg.fmt(base) + " — clique para abrir esse período" });
     var go = function (ev) { ev.stopPropagation(); L.setPeriodo({ r: "livre", de: L.isoDeDia(info.de), ate: L.isoDeDia(info.ate) }); L.toast("Período: " + info.rot); };
     tx.addEventListener("click", go); chip.style.cursor = "pointer"; chip.addEventListener("click", go);

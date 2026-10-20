@@ -15,10 +15,14 @@ Duas rotinas do WinThor alimentam este sistema:
                                               atualizacao lancou no estoque, EI = sobra,
                                               SI = falta). Os mesmos ajustes viram PCMOV
                                               EI/SI, que o diagnostico usa para conferir.
+    1301  Recebimento de compra             -> PCMOV E/EB/ER: o recebimento entra BLOQUEADO
+                                              e o livro da 266 so registra a liberacao;
+                                              PCMOV.QTBLOQUEADA diz quanto entrou bloqueado.
 
 Consultas, uma por tabela de destino, todas no schema `inventario`:
 
     bloqueio     -> inventario.fato_bloqueio     (um registro por movimento do bloqueado)
+    recebimento  -> inventario.fato_recebimento  (uma linha do PCMOV por produto recebido)
     inventario   -> inventario.fato_inventario   (um registro por produto contado)
     posicao      -> inventario.fato_posicao      (estoque, bloqueado, avaria e custo de hoje)
     produto      -> inventario.produto           (descricao, fornecedor, departamento, secao)
@@ -107,6 +111,79 @@ def _mapear_bloqueio(r: dict[str, Any]) -> tuple:
         inteiro(r["coddevol"]), texto(r["programa"]),
         _num(r["qtbloqueada"]), _num(r["qtdesbloqueada"]), _num(r["qtindeniz"]),
         _num(r["qtbloqueadaant"]), _num(r["qtindenizant"]), inteiro(r["numtransent"]) or None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 1301 — recebimento de compra (PCMOV E/EB/ER), que entra BLOQUEADO
+# ---------------------------------------------------------------------------
+# O livro da 266 nao registra o bloqueio do recebimento, so a liberacao (WMS, ou a 266
+# com o motivo 53 "Conferido pelo recebimento"). Quem diz quanto entrou bloqueado e a
+# propria linha do PCMOV: QTBLOQUEADA (= QT em 99,8% das linhas; ESTOQUEDESBLOQUEADO 'S'
+# = entrou livre). Conferido contra a foto diaria do estoque (PCHISTEST) no
+# conferir_recebimento.py. A hora e a do lancamento da nota (PCNFENT.DTENT + HORALANC +
+# MINUTOLANC, sem o CT do frete): a do PCMOV vem em lotes (08:12, 16:01...) e fecha pior
+# com a foto do estoque. O estorno do cancelamento (QT negativa) fica com a data e a hora
+# do proprio PCMOV.
+SQL_RECEBIMENTO = """
+SELECT M.NUMTRANSENT,
+       TO_NUMBER(M.CODFILIAL)  AS CODFILIAL,
+       M.CODPROD,
+       M.CODOPER,
+       M.QT,
+       M.QTBLOQUEADA,
+       M.ESTOQUEDESBLOQUEADO,
+       M.DTMOV,
+       M.HORALANC,
+       M.MINUTOLANC,
+       M.DTCANCEL,
+       N.NF_QUANDO,
+       N.NUMNOTA,
+       N.CODFORNEC,
+       N.CODFUNCLANC
+  FROM PCMOV M
+  LEFT JOIN (SELECT NUMTRANSENT,
+                    MIN(TO_CHAR(DTENT, 'YYYY-MM-DD') || ' ' || LPAD(NVL(HORALANC, '0'), 2, '0') || ':'
+                        || LPAD(NVL(MINUTOLANC, '0'), 2, '0')) AS NF_QUANDO,
+                    MIN(NUMNOTA) AS NUMNOTA, MIN(CODFORNEC) AS CODFORNEC, MIN(CODFUNCLANC) AS CODFUNCLANC
+               FROM PCNFENT
+              WHERE ESPECIE <> 'CT' AND DTENT >= :ini - 60
+              GROUP BY NUMTRANSENT) N
+         ON N.NUMTRANSENT = M.NUMTRANSENT
+ WHERE M.DTMOV >= :ini
+   AND M.CODOPER IN ('E', 'EB', 'ER')
+   AND M.ROTINACAD LIKE '%1301%'
+   AND NVL(M.QT, 0) <> 0
+   AND {filial}
+"""
+
+COLUNAS_RECEBIMENTO = (
+    "dt", "codfilial", "codprod", "numtransent", "numnota", "codfornec", "codfunc", "codoper",
+    "qt", "qtbloqueada", "estoquedesbloqueado", "dtcancel",
+)
+
+
+def _hora(d: datetime | date, h: Any, m: Any) -> datetime:
+    try:
+        return datetime(d.year, d.month, d.day, int(h or 0), int(m or 0))
+    except (TypeError, ValueError):
+        return datetime(d.year, d.month, d.day)
+
+
+def _mapear_recebimento(r: dict[str, Any]) -> tuple:
+    qt = _num(r["qt"])
+    quando = None
+    if qt and qt > 0 and r["nf_quando"]:
+        try:
+            quando = datetime.strptime(r["nf_quando"], "%Y-%m-%d %H:%M")
+        except ValueError:
+            quando = None
+    if quando is None:
+        quando = _hora(r["dtmov"], r["horalanc"], r["minutolanc"])
+    return (
+        quando, inteiro(r["codfilial"]), inteiro(r["codprod"]), inteiro(r["numtransent"]) or None,
+        inteiro(r["numnota"]), inteiro(r["codfornec"]), inteiro(r["codfunclanc"]), texto(r["codoper"]),
+        qt, _num(r["qtbloqueada"]), texto(r["estoquedesbloqueado"]), r["dtcancel"],
     )
 
 
@@ -282,6 +359,16 @@ def _montar() -> list[Consulta]:
             streaming=True,
         ),
         Consulta(
+            nome="recebimento",
+            descricao="Recebimento de compra que entra bloqueado (rotina 1301, PCMOV.QTBLOQUEADA)",
+            pagina="INVENTARIO",
+            sql=SQL_RECEBIMENTO.format(filial=_in_filial("M.CODFILIAL")),
+            destino="inventario.fato_recebimento",
+            colunas=COLUNAS_RECEBIMENTO,
+            mapear=_mapear_recebimento,
+            binds={"ini": ini},
+        ),
+        Consulta(
             nome="inventario",
             descricao="Inventario rotativo: produto contado x estoque (rotina 1147)",
             pagina="INVENTARIO",
@@ -326,7 +413,7 @@ def selecionar(nomes: list[str] | None = None) -> list[Consulta]:
     todas = catalogo()
     if not nomes:
         # cadastros primeiro: a carga dos fatos nao depende deles, mas o painel sim
-        ordem = ["filial", "motivo", "funcionario", "produto", "posicao", "inventario", "bloqueio"]
+        ordem = ["filial", "motivo", "funcionario", "produto", "posicao", "inventario", "recebimento", "bloqueio"]
         return sorted(todas, key=lambda c: ordem.index(c.nome))
     indice = {c.nome: c for c in todas}
     faltando = [n for n in nomes if n not in indice]

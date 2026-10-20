@@ -4,7 +4,8 @@
 --
 -- Fonte: WinThor, rotinas 266 (Bloquear Produtos no Estoque → PCLOGDESBLOQUEIO)
 -- e 1147 (Manutenção de inventário rotativo → PCINVENTROT + PCLOGATUALIZAINVENT),
--- mais o PCEST de hoje. Carga: etl/sync_inventario.py (TRUNCATE + INSERT nos fatos,
+-- mais o PCEST de hoje e, desde a migração 07, o recebimento de compra (1301 → PCMOV).
+-- Carga: etl/sync_inventario.py (TRUNCATE + INSERT nos fatos,
 -- upsert nos cadastros). Toda tabela com RLS ligado e SEM políticas: a chave
 -- pública não lê nada; só o ETL e as funções da Vercel (credencial de servidor).
 -- =============================================================================
@@ -46,6 +47,32 @@ create table if not exists inventario.fato_bloqueio (
 );
 create index if not exists fato_bloqueio_dt on inventario.fato_bloqueio (dt);
 create index if not exists fato_bloqueio_prod on inventario.fato_bloqueio (codfilial, codprod, dt);
+
+-- ----------------------------------------------------------------------------- 1301
+-- Recebimento de compra (migração inventario_07_recebimento, 2026-10-20). O recebimento
+-- entra BLOQUEADO e o livro da 266 não registra esse bloqueio, só a liberação; quem
+-- registra quanto entrou bloqueado é a própria linha do PCMOV (QTBLOQUEADA). Conferido
+-- contra a foto diária do estoque (PCHISTEST): ver etl/conferir_recebimento.py.
+-- Um registro por linha do PCMOV (E/EB/ER da 1301); o estorno do cancelamento vem com
+-- quantidade negativa.
+create table if not exists inventario.fato_recebimento (
+  dt                   timestamp not null,     -- entrada: data e hora de lançamento da nota (PCNFENT); estorno: as do PCMOV
+  codfilial            smallint  not null,
+  codprod              integer   not null,
+  numtransent          bigint,
+  numnota              bigint,
+  codfornec            integer,                -- fornecedor da nota
+  codfunc              integer,                -- quem lançou a nota (PCNFENT.CODFUNCLANC)
+  codoper              text,                   -- E, EB ou ER
+  qt                   numeric,                -- PCMOV.QT (negativa no estorno)
+  qtbloqueada          numeric,                -- PCMOV.QTBLOQUEADA: quanto entrou bloqueado
+  estoquedesbloqueado  text,                   -- 'S' = entrou livre (QTBLOQUEADA 0)
+  dtcancel             timestamp               -- recebimento cancelado (as duas linhas trazem a data)
+);
+create index if not exists fato_recebimento_dt on inventario.fato_recebimento (dt);
+create index if not exists fato_recebimento_trans on inventario.fato_recebimento (numtransent);
+comment on table inventario.fato_recebimento is
+  'Recebimento de compra (1301): uma linha por PCMOV E/EB/ER. QTBLOQUEADA = quanto entrou bloqueado (o livro da 266 não registra esse bloqueio). Estorno do cancelamento com QT negativa.';
 
 -- ----------------------------------------------------------------------------- 1147
 create table if not exists inventario.fato_inventario (
@@ -140,6 +167,7 @@ create table if not exists inventario.painel_cache (
 -- ----------------------------------------------------------------------------- RLS
 alter table inventario.controle_carga  enable row level security;
 alter table inventario.fato_bloqueio   enable row level security;
+alter table inventario.fato_recebimento enable row level security;
 alter table inventario.fato_inventario enable row level security;
 alter table inventario.fato_posicao    enable row level security;
 alter table inventario.produto         enable row level security;

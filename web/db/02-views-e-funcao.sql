@@ -29,6 +29,16 @@
 -- Um registro da 266 que bloqueia E desbloqueia na mesma operação (11 em 2025–2026)
 -- vira dois movimentos. Programa desconhecido vira tipo 0 ("Outro"): nada some.
 --
+-- RECEBIMENTO DE COMPRA (1301, migração inventario_07_recebimento): entra BLOQUEADO, mas
+-- o livro não registra esse bloqueio (só a liberação, pelo WMS ou na 266 com o motivo 53
+-- "Conferido pelo recebimento"). Quem diz quanto entrou bloqueado é a linha do PCMOV
+-- (QTBLOQUEADA = QT em 99,8% das linhas; 'S' em ESTOQUEDESBLOQUEADO = entrou livre).
+-- Conferido contra a foto diária do estoque (PCHISTEST, set/2025–out/2026): na filial 1,
+-- somar o recebimento derruba o que o livro não explica de 35,6 mi para 4,5 mi de un.
+-- (filial 10: de 467 mil para 0). O estorno do cancelamento fica NEUTRO: tira do bloqueado
+-- só se a mercadoria ainda não tinha sido liberada (81% das vezes na filial 1, 44% na 12),
+-- e o livro não diz qual foi o caso.
+--
 -- Tipos (sentido: +1 entra no bloqueado, −1 sai, 0 neutro):
 --   1 Bloqueio manual (+1)            7 Devolução de cliente (+1)
 --   2 Bloqueio por avaria (+1)        8 Devolução cancelada (0)
@@ -36,7 +46,8 @@
 --   4 Desbloqueio manual (−1)        10 Montagem de produtos (+1)
 --   5 Baixa de avaria (−1)           11 Devolução avulsa (+1)
 --   6 Liberação pelo WMS (−1)        12 Devolução de simples remessa (+1)
---   0 Outro (0)
+--  13 Recebimento de compra (+1)     14 Recebimento cancelado (0)
+--  15 Recebimento sem bloqueio (0)    0 Outro (0)
 -- -----------------------------------------------------------------------------
 create or replace view inventario.vw_movimento as
 with f as (
@@ -73,10 +84,22 @@ select f.dt, f.codfilial, f.codprod, f.codfunc, f.coddevol, f.programa, f.numtra
     (case when f.grupo = 'outro' then 0 end,
      coalesce(nullif(f.qtbloqueada, 0), nullif(f.qtdesbloqueada, 0), f.qtindeniz, 0), coalesce(f.qtindeniz, 0))
   ) as v(tipo, qt, qt_avaria)
+ where v.tipo is not null
+union all
+-- recebimento de compra (1301): o que entrou bloqueado (13), a parte que entrou livre (15)
+-- e o estorno do cancelamento (14, neutro). Linha com QT zero não é movimento.
+select r.dt, r.codfilial, r.codprod, r.codfunc, null::integer as coddevol, 'PCSIS1301 (PCMOV)'::text as programa,
+       r.numtransent, v.tipo, v.qt, 0::numeric as qt_avaria
+  from inventario.fato_recebimento r
+  cross join lateral (values
+    (case when r.qt > 0 and coalesce(r.qtbloqueada, 0) > 0 then 13 end, r.qtbloqueada),
+    (case when r.qt > 0 and r.qt - coalesce(r.qtbloqueada, 0) > 0.0005 then 15 end, r.qt - coalesce(r.qtbloqueada, 0)),
+    (case when r.qt < 0 then 14 end, -r.qt)
+  ) as v(tipo, qt)
  where v.tipo is not null;
 
 comment on view inventario.vw_movimento is
-  'Livro de bloqueio (rotina 266 e companhia) lido programa a programa. Tipos e sentido no comentário da migração inventario_02.';
+  'Livro de bloqueio (rotina 266 e companhia) lido programa a programa, mais o recebimento de compra (1301, PCMOV.QTBLOQUEADA). Tipos e sentido no comentário da migração inventario_02 (vigente em 02-views-e-funcao.sql).';
 
 -- -----------------------------------------------------------------------------
 -- vw_inventario — inventário rotativo (1147) com a diferença assinada.
@@ -117,6 +140,7 @@ as $$
 with base as (
   select date_trunc('month', least(
            coalesce((select min(dt) from inventario.fato_bloqueio), localtimestamp),
+           coalesce((select min(dt) from inventario.fato_recebimento), localtimestamp),
            coalesce((select min(data)::timestamp from inventario.fato_inventario), localtimestamp)))::timestamp as b
 ),
 mov as (
@@ -189,6 +213,7 @@ est as (
 ),
 prods as (
   select codprod from inventario.fato_bloqueio
+  union select codprod from inventario.fato_recebimento
   union select codprod from inventario.fato_inventario
   union select codprod from est0
 ),
@@ -197,6 +222,7 @@ prod as (
 ),
 funcs as (
   select codfunc as m from inventario.fato_bloqueio
+  union select codfunc from inventario.fato_recebimento
   union select codfunc_contagem from inventario.fato_inventario
   union select codfunc_atualizacao from inventario.fato_inventario
 )
@@ -204,8 +230,9 @@ select json_build_object(
   'meta', json_build_object(
      'gerado_em',   now(),
      'base',        to_char((select b from base), 'YYYY-MM-DD'),
-     'ini',         to_char(least((select min(dt) from inventario.fato_bloqueio)::date, (select min(data) from inventario.fato_inventario)), 'YYYY-MM-DD'),
-     'ult_mov',     to_char((select max(dt) from inventario.fato_bloqueio), 'YYYY-MM-DD"T"HH24:MI:SS'),
+     'ini',         to_char(least((select min(dt) from inventario.fato_bloqueio)::date, (select min(dt) from inventario.fato_recebimento)::date,
+                                  (select min(data) from inventario.fato_inventario)), 'YYYY-MM-DD'),
+     'ult_mov',     to_char(greatest((select max(dt) from inventario.fato_bloqueio), (select max(dt) from inventario.fato_recebimento)), 'YYYY-MM-DD"T"HH24:MI:SS'),
      'ult_inv',     to_char((select max(coalesce(dt_atualizacao, dt_contagem)) from inventario.fato_inventario), 'YYYY-MM-DD"T"HH24:MI:SS'),
      'carga',       (select max(executado_em) from inventario.controle_carga where consulta = 'bloqueio' and status = 'OK'),
      'filiais',     (select json_agg(distinct codfilial) from inventario.fato_posicao)
@@ -213,6 +240,7 @@ select json_build_object(
   'filiais', (select coalesce(json_agg(json_build_array(f.codfilial, coalesce(f.fantasia, f.razao_social), f.cidade, f.uf) order by f.codfilial), '[]')
                 from inventario.filial f
                where f.codfilial in (select codfilial from inventario.fato_posicao union select codfilial from inventario.fato_bloqueio
+                                     union select codfilial from inventario.fato_recebimento
                                      union select codfilial from inventario.fato_inventario)),
   'motivos', (select coalesce(json_agg(json_build_array(x.coddevol, x.motivo) order by x.coddevol), '[]') from (
                 select m.coddevol, m.motivo from inventario.motivo m

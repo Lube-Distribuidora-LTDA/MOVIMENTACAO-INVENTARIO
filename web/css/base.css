@@ -15,7 +15,7 @@
   --ok: #34e89e; --atencao: #ffb340; --perigo: #ff6b74; --info: #5fb2ff;
   --ok-bg: rgba(52,232,158,.12); --atencao-bg: rgba(255,179,64,.13); --perigo-bg: rgba(255,107,116,.13); --info-bg: rgba(95,178,255,.13);
   /* dado (validado contra --s1) */
-  --d1: #5f7ef5; --d2: #e9c877; --d3: #a78bfa; --d4: #4cc9f0; --d5: #f472b6; --d6: #9db4ff; --d7: #c4b5fd; --d8: #8da2c9;
+  --d1: #5f7ef5; --d2: #e9c877; --d3: #a78bfa; --d4: #4cc9f0; --d5: #f472b6; --d6: #9db4ff; --d7: #c4b5fd; --d8: #8da2c9; --d9: #2dd4bf;
   --a2023: #8da2c9; --a2024: #a78bfa; --a2025: #5f7ef5; --a2026: #e9c877; --a2022: #5b6f98;
   --eixo: #5d73a1; --grade: rgba(124,146,190,.16);
   --sombra: 0 1px 0 rgba(255,255,255,.045) inset, 0 18px 40px -22px rgba(0,0,0,.7);
@@ -38,7 +38,7 @@
   --ouro: #a67a1c; --ouro-forte: #7d5a0f; --ouro-dim: rgba(166,122,28,.11); --ouro-linha: rgba(166,122,28,.5); --ouro-escuro: #8a6414;
   --ok: #0f8a5c; --atencao: #b86e00; --perigo: #c8202c; --info: #1768c4;
   --ok-bg: rgba(15,138,92,.1); --atencao-bg: rgba(184,110,0,.11); --perigo-bg: rgba(200,32,44,.09); --info-bg: rgba(23,104,196,.09);
-  --d1: #2a41c8; --d2: #b8892a; --d3: #7c5ce0; --d4: #0e86b3; --d5: #cc3b88; --d6: #5871e8; --d7: #8c70d8; --d8: #5f759f;
+  --d1: #2a41c8; --d2: #b8892a; --d3: #7c5ce0; --d4: #0e86b3; --d5: #cc3b88; --d6: #5871e8; --d7: #8c70d8; --d8: #5f759f; --d9: #0f8a7e;
   --a2023: #6c7fa6; --a2024: #7c5ce0; --a2025: #2a41c8; --a2026: #b8892a; --a2022: #93a2c4;
   --eixo: #7488b4; --grade: rgba(60,79,124,.14);
   --sombra: 0 1px 0 rgba(255,255,255,.9) inset, 0 12px 30px -20px rgba(20,40,110,.35);

@@ -8,7 +8,7 @@
 var L = window.L;
 
 L.registrarPagina({
-  id: "posicao", grupo: "Rotina 266", menu: "Bloqueado hoje", icone: "armazem",
+  id: "posicao", grupo: "Estoque bloqueado", menu: "Bloqueado hoje", icone: "armazem",
   titulo: "Estoque bloqueado hoje", olho: "Posição do PCEST na última carga", semPeriodo: true,
   filtros: ["filial", "depto", "secao", "fornecedor", "produto"],
   render: render,
@@ -102,7 +102,7 @@ function render(raiz, params) {
   });
   var acoes = faixa != null ? [L.btnPainel("x", "Tirar a faixa " + FAIXAS[faixa].rot, function () { L.irPara("posicao", {}); })] : null;
   raiz.appendChild(L.grade(L.painel({ titulo: "Produtos bloqueados" + (faixa != null ? " · " + FAIXAS[faixa].rot : ""), sub: "um por filial · clique para abrir o relatório do produto", classe: "c-12", semPad: true, corpo: tab, acoes: acoes })));
-  raiz.appendChild(L.nota("Posição do PCEST na última carga (" + L.fDataHora(L.META.carga || L.META.gerado_em) + "), valorizada pelo custo financeiro. Avaria (QTINDENIZ) faz parte do bloqueado. \"Último bloqueio\" é o movimento mais recente que colocou o produto no bloqueado desde jan/2025 (bloqueio, avaria ou devolução); o recebimento de compra não aparece no livro do WinThor, então um produto recebido e ainda não armazenado pode aparecer como \"sem registro\"."));
+  raiz.appendChild(L.nota("Posição do PCEST na última carga (" + L.fDataHora(L.META.carga || L.META.gerado_em) + "), valorizada pelo custo financeiro. Avaria (QTINDENIZ) faz parte do bloqueado. \"Último bloqueio\" é o movimento mais recente que colocou o produto no bloqueado desde jan/2025 (bloqueio, avaria ou devolução). O recebimento de compra fica de fora de propósito: entra bloqueado e sai em horas, na armazenagem, e esconderia a idade do que ficou parado; por isso um produto recebido e ainda não armazenado pode aparecer como \"sem registro\"."));
 }
 
 function barrasEs(corpo, idx, dim, n) {

@@ -1,6 +1,6 @@
 /* =============================================================================
  * pag-visao.js — VISÃO GERAL: o que está acontecendo no galpão.
- * Movimento do estoque bloqueado (266, WMS, devoluções) + inventário rotativo
+ * Movimento do estoque bloqueado (recebimento 1301, 266, WMS, devoluções) + inventário rotativo
  * (1147) + o bloqueado de hoje, com comparação ao período anterior e ao ano anterior.
  * ========================================================================== */
 (function () {
@@ -27,9 +27,9 @@ function render(raiz) {
             leg: L.h("span", { text: L.fInt(r.skus) + " SKUs · " + L.fRc(r.ve + r.vs + r.vn) + " movimentados" }), ajuda: "Tudo o que entrou, saiu ou mudou no estoque bloqueado no período",
             aoClicar: function () { L.irPara("detalhe"); } }),
     L.kpi({ icone: "cadeado", rot: "Entrou no bloqueado", valor: r.ve, fmt: L.fRk, fmtTitulo: L.fR, cmp: c.kc("ve", true), classe: r.ve ? "" : "zero",
-            leg: L.h("span", { text: L.fQ(r.qe) + " un. · bloqueios e devoluções" }), aoClicar: function () { L.abrirDossie({ titulo: "Entrou no bloqueado", f: { sentido: [1] } }); } }),
+            leg: L.h("span", { text: L.fQ(r.qe) + " un. · recebimento, devoluções e bloqueios" }), aoClicar: function () { L.abrirDossie({ titulo: "Entrou no bloqueado", f: { sentido: [1] } }); } }),
     L.kpi({ icone: "destravar", rot: "Saiu do bloqueado", valor: r.vs, fmt: L.fRk, fmtTitulo: L.fR, cmp: c.kc("vs"), classe: r.vs ? "ok" : "zero",
-            leg: L.h("span", { text: L.fQ(r.qs) + " un. · inclui a liberação do recebimento pelo WMS" }), aoClicar: function () { L.abrirDossie({ titulo: "Saiu do bloqueado", f: { sentido: [-1] } }); } }),
+            leg: L.h("span", { text: L.fQ(r.qs) + " un. · liberação do WMS e desbloqueios" }), aoClicar: function () { L.abrirDossie({ titulo: "Saiu do bloqueado", f: { sentido: [-1] } }); } }),
     L.kpi({ icone: "alerta", rot: "Avaria registrada", valor: r.va266, fmt: L.fRk, fmtTitulo: L.fR, cmp: c.kc("va266", true), classe: r.va266 ? "perigo" : "zero",
             leg: L.h("span", { text: L.fQ(r.qa266) + " un. marcadas como avaria na 266" }), aoClicar: function () { L.abrirDossie({ titulo: "Avaria registrada", f: { tipo: [2, 3] } }); } }),
     L.kpi({ icone: "armazem", rot: "Bloqueado hoje", valor: es.vb, fmt: L.fRk, fmtTitulo: L.fR, classe: es.vb ? "atencao" : "zero",

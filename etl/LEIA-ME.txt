@@ -6,6 +6,8 @@ duas rotinas do WinThor:
   - 266  Bloquear Produtos no Estoque (livro PCLOGDESBLOQUEIO: bloqueio,
          desbloqueio, avaria, devolucao que entra bloqueada, liberacao do WMS)
   - 1147 Manutencao de inventario rotativo (o que foi contado, sobra e falta)
+  - 1301 Recebimento de compra (PCMOV: quanto de cada nota entrou bloqueado,
+         ate o WMS armazenar; o livro da 266 so registra a liberacao)
 
 Caminho: WinThor (Oracle) -> ETL em Python (VM SRV-IA) -> Supabase, projeto
 DATA WAREHOUSE, schema "inventario" -> painel na Vercel.
@@ -21,6 +23,8 @@ O QUE CADA ARQUIVO FAZ
   ATUALIZAR AGORA.bat  a qualquer hora, na SRV-IA: copia o ETL mais novo e roda
                        uma carga. Nao mexe no agendamento.
   DIAGNOSTICO.bat      roda tudo sem gravar e confere a 1147 contra o PCMOV.
+  conferir_recebimento.py  (na pasta 2) prova, contra a foto diaria do estoque
+                       (PCHISTEST), que o recebimento entra bloqueado. Nao grava.
 
 HORARIOS DA CARGA
   07:05, 09:05, 11:05, 13:05, 15:05, 17:05, 19:05 e 22:05

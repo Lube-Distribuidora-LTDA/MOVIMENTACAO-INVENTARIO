@@ -9,7 +9,10 @@ contra o WinThor SEM GRAVAR NADA, mede o tempo e confere o que da para conferir:
   3. 1147: produto contado em mais de um local no mesmo inventario (o painel soma
      por inventario + filial + produto; se aparecer, a regra precisa mudar);
   4. 266: quantos movimentos de cada programa (para ver se surgiu programa novo,
-     que a view vw_bloqueio ainda nao sabe ler).
+     que a view vw_bloqueio ainda nao sabe ler);
+  5. 1301: como cada linha de recebimento entrou (bloqueada inteira, em parte, livre,
+     estorno). A prova de que o recebimento entra bloqueado, contra a foto diaria do
+     estoque, e o conferir_recebimento.py.
 
 Uso:  python diagnostico_inventario.py
 Resultado na tela e em diagnostico_inventario.log.
@@ -64,6 +67,20 @@ def main() -> int:
             conhecido = any(k in p for k in PROGRAMAS_CONHECIDOS)
             log.info("   %-34s %9s%s", p, _f(n), "" if conhecido else "   <-- PROGRAMA NOVO: a view vw_bloqueio nao o classifica")
             problemas += 0 if conhecido else 1
+
+        # --- 1301: como o recebimento entrou -----------------------------------------
+        # QTBLOQUEADA = QT e o normal (99,8% na filial 1). Linha que entrou livre ou em parte
+        # aparece no painel como "Recebimento sem bloqueio"; QTBLOQUEADA maior que QT e erro
+        # de digitacao (caso real: 17 paletes lancados com 17.000.000 bloqueados em 27/06/2025).
+        sit = Counter()
+        for r in dados["recebimento"]:
+            qt, qb = float(r["qt"] or 0), float(r["qtbloqueada"] or 0)
+            sit["estorno de cancelamento" if qt < 0 else "entrou bloqueado inteiro" if abs(qb - qt) < 0.001
+                else "entrou livre" if qb == 0 else "bloqueado MAIOR que o recebido" if qb > qt else "entrou em parte bloqueado"] += 1
+        log.info("=" * 70)
+        log.info("1301 — linhas de recebimento por situacao (conferencia contra a foto do estoque: conferir_recebimento.py):")
+        for k, n in sit.most_common():
+            log.info("   %-34s %9s%s", k, _f(n), "   <-- ERRO DE DIGITACAO NO WINTHOR" if k.startswith("bloqueado MAIOR") else "")
 
         # --- 1147: locais ----------------------------------------------------------
         inv = dados["inventario"]

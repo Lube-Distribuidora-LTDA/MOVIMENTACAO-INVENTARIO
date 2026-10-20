@@ -7,7 +7,7 @@ var L = window.L;
 var FIXO = { rotina: [0] };            // só o que a 266 gravou (tipos 1 a 5)
 
 L.registrarPagina({
-  id: "bloqueios", grupo: "Rotina 266", menu: "Bloqueios e avarias", icone: "cadeado",
+  id: "bloqueios", grupo: "Estoque bloqueado", menu: "Bloqueios e avarias", icone: "cadeado",
   titulo: "Bloqueios e avarias", olho: "Rotina 266 · Bloquear produtos no estoque",
   filtros: ["filial", "tipo", "motivo", "func", "depto", "fornecedor", "produto"],
   mais: ["secao", "dow", "hora"],
@@ -99,13 +99,13 @@ function render(raiz) {
       { id: "ve", titulo: "Bloqueado", tipo: "moedaInt", valor: function (x) { return x.ve; }, barra: true, exportarTipo: "moeda" },
       { id: "vs", titulo: "Desbloqueado", tipo: "moedaInt", valor: function (x) { return x.vs; }, exportarTipo: "moeda" },
       { id: "va", titulo: "Avaria", tipo: "moedaInt", valor: function (x) { return x.va; }, exportarTipo: "moeda" },
-      { id: "saldo", titulo: "Bloq. − desbloq.", tipo: "moedaInt", valor: function (x) { return x.ve - x.vs; }, exportarTipo: "moeda", essencial: false, dica: "No livro: o bloqueio automático do recebimento não aparece, só a liberação" },
+      { id: "saldo", titulo: "Bloq. − desbloq.", tipo: "moedaInt", valor: function (x) { return x.ve - x.vs; }, exportarTipo: "moeda", essencial: false, dica: "Só a 266: o bloqueio do recebimento não passa por ela (está na tela Recebimento e devoluções), só a liberação manual" },
       { id: "hoje", titulo: "Bloqueado hoje", tipo: "moedaInt", valor: function (x) { return x.hoje; }, exportarTipo: "moeda", essencial: false },
     ],
     aoClicar: function (x, ev) { L.clique("produto", x.k, ev); },
   });
   raiz.appendChild(L.grade(L.painel({ titulo: "Produtos", sub: "o que mais foi bloqueado na 266 no período · valor ao custo de hoje", classe: "c-12", semPad: true, corpo: tProd })));
-  raiz.appendChild(L.nota("A 266 grava o bloqueio e o desbloqueio de dois jeitos (com e sem versão no nome do programa); os dois são lidos aqui, um a um, e o saldo fecha com o estoque bloqueado do PCEST. O desbloqueio inclui a liberação de mercadoria recebida (motivo “Conferido pelo recebimento”), cujo bloqueio na entrada é automático e não fica no livro — por isso o desbloqueado passa do bloqueado. Avaria = quantidade bloqueada como indenizada (QTINDENIZ)."));
+  raiz.appendChild(L.nota("A 266 grava o bloqueio e o desbloqueio de dois jeitos (com e sem versão no nome do programa); os dois são lidos aqui, um a um, e o saldo fecha com o estoque bloqueado do PCEST. O desbloqueio inclui a liberação de mercadoria recebida (motivo “Conferido pelo recebimento”), cujo bloqueio na entrada é automático e não passa pela 266 (o painel o lê da nota, no PCMOV: tela Recebimento e devoluções) — por isso, nesta tela, o desbloqueado passa do bloqueado. Avaria = quantidade bloqueada como indenizada (QTINDENIZ)."));
 }
 
 })();

@@ -18,7 +18,11 @@
 var L = window.L;
 
 /* ------------------------------ tipos de movimento ------------------------------ */
-/* s: +1 entra no bloqueado, −1 sai, 0 neutro. g: grupo de origem (dimensão "Rotina"). */
+/* s: +1 entra no bloqueado, −1 sai, 0 neutro. g: grupo de origem (dimensão "Rotina").
+   O recebimento (13) vem do PCMOV, não do livro da 266: o WinThor grava quanto entrou
+   bloqueado na própria linha da nota (QTBLOQUEADA). O estorno do cancelamento (14) é neutro
+   (tira do bloqueado só se a mercadoria ainda não tinha sido liberada); a parte que entrou
+   livre (15) também. */
 L.TIPOS = [
   { id: 0,  nome: "Outro",                          curto: "Outro",           s: 0,  g: 6, cor: "--d8" },
   { id: 1,  nome: "Bloqueio manual",                curto: "Bloqueio",        s: 1,  g: 0, cor: "--d1" },
@@ -33,6 +37,9 @@ L.TIPOS = [
   { id: 10, nome: "Montagem de produtos",           curto: "Montagem",        s: 1,  g: 5, cor: "--d8" },
   { id: 11, nome: "Devolução avulsa",               curto: "Dev. avulsa",     s: 1,  g: 2, cor: "--d6" },
   { id: 12, nome: "Devolução de simples remessa",   curto: "Dev. s. remessa", s: 1,  g: 2, cor: "--d6" },
+  { id: 13, nome: "Recebimento de compra",          curto: "Recebimento",     s: 1,  g: 7, cor: "--d9" },
+  { id: 14, nome: "Recebimento cancelado",          curto: "Receb. cancelado", s: 0, g: 7, cor: "--d8" },
+  { id: 15, nome: "Recebimento sem bloqueio",       curto: "Receb. livre",    s: 0,  g: 7, cor: "--d7" },
 ];
 L.ROTINAS = [
   { id: 0, nome: "266 · Bloqueio de estoque" },
@@ -42,13 +49,15 @@ L.ROTINAS = [
   { id: 4, nome: "552 · Desbloqueio automático" },
   { id: 5, nome: "1122 · Montagem de produtos" },
   { id: 6, nome: "Outros programas" },
+  { id: 7, nome: "1301 · Recebimento de compra" },
 ];
 L.SENTIDOS = [{ id: 1, nome: "Entrou no bloqueado" }, { id: -1, nome: "Saiu do bloqueado" }, { id: 0, nome: "Neutro (não muda o saldo)" }];
 L.DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 L.DS3 = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 L.RESULTADOS = [{ id: 1, nome: "Sobra (contou mais)" }, { id: -1, nome: "Falta (contou menos)" }, { id: 0, nome: "Sem divergência" }];
 /* um movimento acima disto, num registro só, é erro de digitação no WinThor (o caso real:
-   17.000.043 paletes desbloqueados em 04/07/2025). Fica fora das somas, com aviso na tela. */
+   recebimento de 17 paletes lançado com 17.000.000 bloqueados em 27/06/2025 e desbloqueado
+   em 04/07/2025). Fica fora das somas, com aviso na tela. */
 L.LIMITE_SUSPEITO = 1000000;
 L.corTipo = function (k) { return L.cssVar(L.TIPOS[k] ? L.TIPOS[k].cor : "--d8"); };
 
@@ -189,8 +198,9 @@ function preparar(J, versao) {
     if (!c) EV.semCusto++;
     EV.v[i] = EV.q[i] * c; EV.va[i] = EV.a[i] * c;
     if (EV.q[i] >= L.LIMITE_SUSPEITO) { EV.sus[i] = 1; EV.nSus++; }
-    // último bloqueio de cada filial × produto (para "há quanto tempo está bloqueado")
-    if (L.TIPOS[EV.k[i]] && L.TIPOS[EV.k[i]].s === 1) {
+    // último bloqueio de cada filial × produto (para "há quanto tempo está bloqueado"). O recebimento
+    // fica de fora: entra e sai do bloqueado em horas (armazenagem) e esconderia a idade do que ficou.
+    if (L.TIPOS[EV.k[i]] && L.TIPOS[EV.k[i]].s === 1 && L.TIPOS[EV.k[i]].g !== 7) {
       var ps = posDe.get(chaveFP(E.f[i], EV.p[i]));
       if (ps != null) { ES.ultBloq[ps] = EV.dia[i]; ES.motUlt[ps] = EV.m[i]; }
     }
@@ -459,7 +469,7 @@ L.spec = function (extra, periodo) {
 /* resumo dos movimentos: contagem, quantidades e valores por sentido, avaria e distintos */
 L.resumoEv = function (idx) {
   var EV = L.EV, T = L.TIPOS, r = { n: idx.length, q: 0, v: 0, qe: 0, ve: 0, ne: 0, qs: 0, vs: 0, ns: 0, qn: 0, vn: 0, nn: 0, qa: 0, va: 0, qab: 0, vab: 0, skus: 0, funcs: 0, docs: 0,
-                               porTipo: new Float64Array(13), qTipo: new Float64Array(13), nTipo: new Int32Array(13), vaTipo: new Float64Array(13), qaTipo: new Float64Array(13) };
+                               porTipo: new Float64Array(T.length), qTipo: new Float64Array(T.length), nTipo: new Int32Array(T.length), vaTipo: new Float64Array(T.length), qaTipo: new Float64Array(T.length) };
   var prods = new Set(), funcs = new Set(), docs = new Set();
   for (var j = 0; j < idx.length; j++) {
     var i = idx[j], k = EV.k[i], s = T[k].s, q = EV.q[i], v = EV.v[i];
