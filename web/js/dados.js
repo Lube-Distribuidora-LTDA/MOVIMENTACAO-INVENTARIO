@@ -163,7 +163,7 @@ L.versaoNoBanco = function () { return fetch("api/versao?_=" + Date.now(), { cac
 /* ------------------------------ ao vivo: o pacote do dia do AGENTE LUBE ------------------------------ */
 /* O agente lê o WinThor de segundos em segundos e, depois de gravar, monta no banco o pacote
    do dia (inventario.painel_hoje): movimentos de ontem e hoje, posição inteira e inventários
-   de 30 dias. Aqui ele é somado ao pacote da carga (de 2 em 2 horas): o que é de antes de
+   de 30 dias. Aqui ele é somado ao pacote da carga (às 07:05): o que é de antes de
    ontem vem da carga; de ontem em diante, do pacote do dia. Sem o pacote do dia (agente
    desligado), o painel é a carga, como sempre foi. */
 function pegarHoje(ver) {

@@ -1,6 +1,6 @@
 /**
  * /api/versao — o que há de novo, numa consulta pequena e sem cache:
- *   versao, gerado_em…  o pacote da carga (de 2 em 2 horas); o navegador só baixa /api/dados se mudou
+ *   versao, gerado_em…  o pacote da carga (às 07:05); o navegador só baixa /api/dados se mudou
  *   hoje                o pacote do dia, montado pelo AGENTE LUBE (ao vivo); muda a cada gravação
  *   agente              o agente está ligado? (batimento com menos de 3 minutos)
  *   pedido              com ?pedido=<id>: como está o pedido do botão Atualizar

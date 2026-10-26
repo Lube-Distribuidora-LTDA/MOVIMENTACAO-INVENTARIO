@@ -26,8 +26,12 @@ O QUE CADA ARQUIVO FAZ
   conferir_recebimento.py  (na pasta 2) prova, contra a foto diaria do estoque
                        (PCHISTEST), que o recebimento entra bloqueado. Nao grava.
 
-HORARIOS DA CARGA
-  07:05, 09:05, 11:05, 13:05, 15:05, 17:05, 19:05 e 22:05
+HORARIO DA CARGA
+  So as 07:05, desde 2026-10-26 (decisao do Julio). Durante o dia quem mantem o
+  painel ao vivo e o AGENTE LUBE (P:\INTEGRACAO BI\AGENTE), lendo o WinThor de
+  30 s a 1 h; a carga da manha pega o que aconteceu durante a noite e refaz o
+  historico inteiro, o pacote do painel e a conferencia da 1147.
+  Ate 2026-10-26 eram 8: 07:05 a 19:05 de 2 em 2 horas e 22:05.
   (aos :05 de proposito: Trade :25, Reposicoes :35, Comercial :45, Compras :50)
 
 A CARGA ENTROU?

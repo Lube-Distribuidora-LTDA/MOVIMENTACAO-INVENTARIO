@@ -9,7 +9,7 @@
  *
  * Dez cliques seguidos viram uma leitura só (o pedido aberto serve para todos). Com o agente
  * fora do ar (batimento com mais de 3 minutos), nada é pedido: a resposta diz isso e o
- * navegador cai no jeito antigo (conferir a carga de 2 em 2 horas).
+ * navegador cai no jeito antigo (conferir a carga agendada, às 07:05).
  */
 "use strict";
 const { consultar, json, semConfiguracao, erroBanco } = require("./_db");

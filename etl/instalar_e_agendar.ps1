@@ -371,11 +371,14 @@ try {
     }
 
     # --- criar a tarefa de verdade, no modo que passou ----------------------
-    # Horarios aos :05, de proposito: o TRADE roda aos :25, o REPOSICOES aos :35,
+    # Horario aos :05, de proposito: o TRADE roda aos :25, o REPOSICOES aos :35,
     # o COMERCIAL aos :45 e o COMPRAS aos :50 - dois ETLs na mesma hora disputam o
-    # mesmo Oracle e o mesmo banco. A cada 2 horas no expediente (o galpao mexe o
-    # dia inteiro) e uma a noite, para o fechamento do dia.
-    $horarios = @("07:05", "09:05", "11:05", "13:05", "15:05", "17:05", "19:05", "22:05")
+    # mesmo Oracle e o mesmo banco.
+    # SO AS 07:05 desde 2026-10-26 (decisao do Julio): durante o dia o AGENTE LUBE
+    # mantem o Inventario ao vivo (de 30 s a 1 h); a carga da manha pega o que
+    # aconteceu durante a noite e refaz o historico inteiro, o pacote do painel e a
+    # conferencia da 1147. Ate entao eram 8 cargas (07:05 a 19:05 de 2 em 2 h e 22:05).
+    $horarios = @("07:05")
 
     Write-Host ""
     Write-Host "Criando a tarefa no modo que passou..."
@@ -445,7 +448,7 @@ try {
     Write-Host "inventario.controle_carga no Supabase (projeto DATA WAREHOUSE)." -ForegroundColor Cyan
     if ($modoBom.nome -eq "Interactive") {
         Write-Host ""
-        Write-Host "ATENCAO: neste modo a carga das 22:05 so roda se" -ForegroundColor Yellow
+        Write-Host "ATENCAO: neste modo a carga das 07:05 so roda se" -ForegroundColor Yellow
         Write-Host "voce deixar o Windows logado (pode bloquear a tela, mas nao deslogar)." -ForegroundColor Yellow
     }
 

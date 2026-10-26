@@ -107,7 +107,7 @@ No padrão da casa: filtros de múltipla escolha com busca (vazio = todos), per�
 
 O **AGENTE LUBE** (`Desktop\BI\22. AGENTE LUBE`, na `SRV-IA`) lê o WinThor de segundos em segundos e grava só a diferença nas tabelas deste schema. Depois de gravar, roda `inventario.atualizar_painel_hoje()` (`db/08-painel-hoje.sql`), que monta o **pacote do dia** — movimentos de ontem e hoje, posição inteira, inventários de 30 dias, no mesmo formato do pacote da carga — no máximo de 10 em 10 s (~110 ms, ~100 KB comprimido).
 
-- **A tela muda sozinha.** De 15 em 15 s, com a aba à vista, o painel pergunta `/api/versao`; se o pacote do dia mudou, baixa só ele (`/api/hoje`) e soma ao da carga: até anteontem vale a carga, de ontem em diante o do dia. Redesenha sem animar, no mesmo filtro e período; com relatório ou lista aberta, espera fechar. A carga de 2 em 2 horas também entra sozinha, sem recarregar a página.
+- **A tela muda sozinha.** De 15 em 15 s, com a aba à vista, o painel pergunta `/api/versao`; se o pacote do dia mudou, baixa só ele (`/api/hoje`) e soma ao da carga: até anteontem vale a carga, de ontem em diante o do dia. Redesenha sem animar, no mesmo filtro e período; com relatório ou lista aberta, espera fechar. A carga da manhã também entra sozinha, sem recarregar a página.
 - **O botão Atualizar é a ponte.** `/api/atualizar` grava um pedido (`agente.pedir_atualizacao`, que avisa o agente por `NOTIFY`); o agente lê o WinThor na hora, monta o pacote e responde em `agente.pedido` com o que mudou. O painel mostra "WinThor lido agora (1,5 s): 20 posições de estoque mudaram". O painel nunca fala com o Oracle.
 - **Sem o agente,** tudo é como antes: indicador cinza "Carga das HH:MM", e o Atualizar avisa e confere a carga.
 - Indicador ao lado do Atualizar: verde **"Ao vivo · hh:mm:ss"** com o agente ligado.
@@ -124,7 +124,7 @@ npm install
 node servidor_local.js               # http://localhost:3102
 ```
 
-Agendamento (na VM `SRV-IA`): `P:\INTEGRAÇÃO BI\INVENTARIO\INSTALAR TUDO.bat`. Cargas às 07:05, 09:05, 11:05, 13:05, 15:05, 17:05, 19:05 e 22:05. "A carga entrou?" se responde em `inventario.controle_carga`, nunca pelo log da tela.
+Agendamento (na VM `SRV-IA`): `P:\INTEGRAÇÃO BI\INVENTARIO\INSTALAR TUDO.bat`. **Carga só às 07:05** desde 2026-10-26 (decisão do Júlio): durante o dia o AGENTE LUBE mantém o painel ao vivo; a carga da manhã pega a noite e refaz o histórico, o pacote do painel e a conferência da 1147 (até então eram 8, de 07:05 a 22:05). "A carga entrou?" se responde em `inventario.controle_carga`, nunca pelo log da tela.
 
 ## Vercel
 

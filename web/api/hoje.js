@@ -3,7 +3,7 @@
  *
  * Quem monta é o AGENTE LUBE: ele lê o WinThor de segundos em segundos e, depois de
  * gravar, roda inventario.atualizar_painel_hoje() (agente.sistema.apos_gravar). O
- * navegador soma este pacote ao da carga (/api/dados, de 2 em 2 horas): de ontem em
+ * navegador soma este pacote ao da carga (/api/dados, às 07:05): de ontem em
  * diante vale o do dia. Mesmo formato de entrega do /api/dados (bytes gzip crus).
  *
  * O banco guarda texto (o Postgres não tem gzip; o TOAST comprime no disco): a

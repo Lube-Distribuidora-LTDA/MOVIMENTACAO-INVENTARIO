@@ -6,7 +6,7 @@
 -- recebimento de ontem e hoje, posição inteira, inventários de 30 dias). Depois de gravar,
 -- ele roda inventario.atualizar_painel_hoje(), que monta o PACOTE DO DIA e guarda em
 -- inventario.painel_hoje_cache. O navegador soma esse pacote ao pacote da carga
--- (painel_dados, de 2 em 2 horas): o que é de antes de ontem vem da carga; de ontem em
+-- (painel_dados, às 07:05; eram 8 por dia até 2026-10-26): o que é de antes de ontem vem da carga; de ontem em
 -- diante, do pacote do dia. A tela muda sozinha, sem F5.
 --
 -- O pacote do dia tem o MESMO formato do pacote da carga (colunas, mesma ordem), com três

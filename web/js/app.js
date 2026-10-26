@@ -144,7 +144,7 @@ function navegarPaginas(d) { var i = L.ordemPaginas.indexOf(L.estado.pagina) + d
 
 /* ------------------------------ ao vivo (AGENTE LUBE) ------------------------------ */
 /* De 15 em 15 s, com a aba à vista, o painel pergunta se há dado novo (/api/versao). Se o agente
-   montou um pacote do dia novo (ou saiu a carga de 2 em 2 horas), baixa só ele e redesenha a tela
+   montou um pacote do dia novo (ou saiu a carga das 07:05), baixa só ele e redesenha a tela
    sem animar, no mesmo filtro e período. Com relatório ou lista aberta, espera fechar. */
 var AO_VIVO_MS = 15000, vivoOcupado = false;
 function hhmmss(iso) { return iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""; }
@@ -156,7 +156,7 @@ function mostrarVivo() {
   el.querySelector("b").textContent = vivo ? "Ao vivo · " + hhmmss(L.CONFERIDO_EM) : L.AO_VIVO ? "WinThor às " + hhmmss(M.ao_vivo) : "Carga das " + horaCurta(M.carga || M.gerado_em);
   el.title = vivo
     ? "O AGENTE LUBE lê o WinThor de segundos em segundos e a tela muda sozinha. Conferido às " + hhmmss(L.CONFERIDO_EM) + "; último dado novo às " + hhmmss(M.ao_vivo) + "."
-    : "O agente do WinThor não está ligado: o painel mostra " + (L.AO_VIVO ? "o que ele leu às " + hhmmss(M.ao_vivo) : "a carga agendada (de 2 em 2 horas)") + " e pega a próxima sozinho.";
+    : "O agente do WinThor não está ligado: o painel mostra " + (L.AO_VIVO ? "o que ele leu às " + hhmmss(M.ao_vivo) : "a carga agendada (às 07:05)") + " e pega a próxima sozinho.";
 }
 function podeAplicar() { return !(L.dossieAberto && L.dossieAberto()) && !document.querySelector(".pop"); }
 function redesenharAoVivo() {
