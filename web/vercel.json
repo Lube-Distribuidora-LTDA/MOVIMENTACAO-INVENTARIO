@@ -4,7 +4,9 @@
   "functions": {
     "api/dados.js": { "maxDuration": 60 },
     "api/versao.js": { "maxDuration": 30 },
-    "api/img.js": { "maxDuration": 15 }
+    "api/img.js": { "maxDuration": 15 },
+    "api/hoje.js": { "maxDuration": 30 },
+    "api/atualizar.js": { "maxDuration": 30 }
   },
   "headers": [
     {

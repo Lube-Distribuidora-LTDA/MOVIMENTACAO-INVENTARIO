@@ -1,7 +1,7 @@
 /**
  * servidor_local.js — abre o painel no seu computador, antes (ou sem) publicar na Vercel.
  *
- * Serve a pasta web/ e atende /api/dados, /api/versao e /api/img com AS MESMAS funções
+ * Serve a pasta web/ e atende /api/dados, /api/versao, /api/img, /api/hoje e /api/atualizar com AS MESMAS funções
  * que a Vercel usa, contra o DATA WAREHOUSE de verdade. A senha do banco vem do ENV do
  * ETL: é lida para a memória deste processo e nunca é impressa nem gravada.
  *
@@ -42,6 +42,8 @@ const rotas = {
   "/api/dados": require(path.join(WEB, "api", "dados.js")),
   "/api/versao": require(path.join(WEB, "api", "versao.js")),
   "/api/img": require(path.join(WEB, "api", "img.js")),
+  "/api/hoje": require(path.join(WEB, "api", "hoje.js")),
+  "/api/atualizar": require(path.join(WEB, "api", "atualizar.js")),
 };
 const TIPOS = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",

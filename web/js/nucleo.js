@@ -200,7 +200,8 @@ var reduz = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").
 L.contar = function (el, valor, fmt, dur) {
   var de = el._v == null ? 0 : el._v;
   el._v = valor;
-  if (reduz || document.hidden || valor == null || !isFinite(valor) || de === valor) { el.textContent = fmt(valor); return; }
+  // L.semAnimar: redesenho ao vivo (dado novo do agente) — o número troca sem contar de novo
+  if (reduz || L.semAnimar || document.hidden || valor == null || !isFinite(valor) || de === valor) { el.textContent = fmt(valor); return; }
   var t0 = performance.now(); dur = dur || 800;
   var id = el._anim = (el._anim || 0) + 1;
   (function passo() {

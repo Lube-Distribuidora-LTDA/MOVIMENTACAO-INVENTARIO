@@ -82,4 +82,19 @@ table.calor { width: 100%; border-collapse: separate; border-spacing: 3px; font:
 .menu-rodape .versao { margin-top: 4px; opacity: .7; font-family: var(--f-num); font-size: 10.5px; }
 .btn-ic.girando svg { animation: gira 1s linear infinite; }
 @keyframes gira { to { transform: rotate(360deg); } }
+
+/* ------------------------------ ao vivo (AGENTE LUBE) ------------------------------ */
+.ao-vivo {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--linha); background: var(--s1); font: 600 12px var(--f-txt); color: var(--t3); white-space: nowrap;
+}
+.ao-vivo i { width: 8px; height: 8px; border-radius: 50%; background: var(--t3); flex: none; }
+.ao-vivo b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ao-vivo.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: color-mix(in srgb, var(--ok) 8%, var(--s1)); }
+.ao-vivo.on i { background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: pulsa 1.6s ease-in-out infinite; }
+@keyframes pulsa { 50% { opacity: .3; } }
+@media (max-width: 900px) { .ao-vivo b { display: none; } .ao-vivo { padding: 0 14px; } }
+/* redesenho ao vivo: as barras e linhas entram no lugar, sem crescer de novo */
+.sem-animar .graf .entra, .sem-animar .graf .entra-h { animation: none; }
+.sem-animar .graf .linha-d { animation: none; stroke-dashoffset: 0; }
 .kpi .leg span { overflow-wrap: anywhere; }

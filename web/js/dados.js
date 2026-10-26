@@ -111,9 +111,11 @@ function erroHttp(r, oque) {
     throw new Error("Não foi possível ler " + oque + " (" + r.status + (j && j.mensagem ? ": " + j.mensagem : j && j.erro ? ": " + j.erro : "") + ").");
   });
 }
-function baixarPacote(versao, aoProgresso) {
-  return fetch("api/dados?v=" + encodeURIComponent(versao || "x"), { cache: "no-store" }).then(function (r) {
-    if (!r.ok) return erroHttp(r, "o pacote de dados");
+function baixarPacote(versao, aoProgresso) { return baixar("api/dados?v=" + encodeURIComponent(versao || "x"), aoProgresso, "o pacote de dados"); }
+function baixarHoje(versao) { return baixar("api/hoje?v=" + encodeURIComponent(versao || "x"), null, "o pacote do dia"); }
+function baixar(url, aoProgresso, oque) {
+  return fetch(url, { cache: "no-store" }).then(function (r) {
+    if (!r.ok) return erroHttp(r, oque);
     var total = +(r.headers.get("Content-Length") || 0), lido = 0;
     var corpo = r.body;
     if (aoProgresso && corpo && corpo.getReader) {
@@ -124,29 +126,146 @@ function baixarPacote(versao, aoProgresso) {
   }).then(function (txt) { return JSON.parse(txt); });
 }
 
-/* Abre o painel: cópia do navegador primeiro (se for a versão do banco, nem baixa). */
+/* Abre o painel: cópia do navegador primeiro (se for a versão do banco, nem baixa), e por
+   cima o pacote do dia do AGENTE LUBE, quando existir. */
+L.BASE_J = null; L.BASE_VERSAO = null; L.HOJE_J = null; L.HOJE_VERSAO = null; L.AO_VIVO = false;
 L.carregarTudo = function (aoAviso) {
   var aviso = aoAviso || function () {};
   return Promise.all([
     fetch("api/versao?_=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : erroHttp(r, "a versão dos dados"); }),
     idbLer(),
   ]).then(function (r) {
-    var ver = r[0], copia = r[1];
-    if (copia && copia.versao === ver.versao) { L.ORIGEM = "copia"; return preparar(copia.pacote, ver.versao); }
-    aviso(copia ? "Baixando os dados da carga das " + L.fDataHora(ver.gerado_em) + "…" : "Baixando os dados (só na primeira vez)…");
-    return baixarPacote(ver.versao, function (l, t) { aviso("Baixando os dados… " + (t ? Math.round(l / t * 100) + "%" : L.fNum(l / 1048576, 1) + " MB")); })
-      .then(function (pac) { L.ORIGEM = "banco"; idbGravar({ versao: ver.versao, pacote: pac }); return preparar(pac, ver.versao); });
+    var ver = r[0], copia = r[1], base;
+    L.ULTIMA_VERSAO = ver; L.CONFERIDO_EM = new Date();
+    if (copia && copia.versao === ver.versao) { L.ORIGEM = "copia"; base = Promise.resolve(copia.pacote); }
+    else {
+      aviso(copia ? "Baixando os dados da carga das " + L.fDataHora(ver.gerado_em) + "…" : "Baixando os dados (só na primeira vez)…");
+      base = baixarPacote(ver.versao, function (l, t) { aviso("Baixando os dados… " + (t ? Math.round(l / t * 100) + "%" : L.fNum(l / 1048576, 1) + " MB")); })
+        .then(function (pac) { L.ORIGEM = "banco"; idbGravar({ versao: ver.versao, pacote: pac }); return pac; });
+    }
+    return base.then(function (pac) {
+      L.BASE_J = pac; L.BASE_VERSAO = ver.versao;
+      return pegarHoje(ver).then(montar);
+    });
   }, function (e) {
     // sem o servidor: abre com a cópia guardada, avisando
     return idbLer().then(function (copia) {
       if (!copia) throw e;
       L.ORIGEM = "offline"; L.toast("Sem conexão com o servidor: mostrando os dados guardados neste computador", "erro");
-      return preparar(copia.pacote, copia.versao);
+      L.BASE_J = copia.pacote; L.BASE_VERSAO = copia.versao; L.HOJE_J = null; L.HOJE_VERSAO = null;
+      montar();
     });
   });
 };
-/* versão nova no banco? (botão Atualizar) */
+/* versão nova no banco? (a cada 20 s e no botão Atualizar) */
 L.versaoNoBanco = function () { return fetch("api/versao?_=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : erroHttp(r, "a versão dos dados"); }); };
+
+/* ------------------------------ ao vivo: o pacote do dia do AGENTE LUBE ------------------------------ */
+/* O agente lê o WinThor de segundos em segundos e, depois de gravar, monta no banco o pacote
+   do dia (inventario.painel_hoje): movimentos de ontem e hoje, posição inteira e inventários
+   de 30 dias. Aqui ele é somado ao pacote da carga (de 2 em 2 horas): o que é de antes de
+   ontem vem da carga; de ontem em diante, do pacote do dia. Sem o pacote do dia (agente
+   desligado), o painel é a carga, como sempre foi. */
+function pegarHoje(ver) {
+  if (!ver || !ver.hoje || !ver.hoje.versao) { L.HOJE_J = null; L.HOJE_VERSAO = null; return Promise.resolve(); }
+  if (ver.hoje.versao === L.HOJE_VERSAO && L.HOJE_J) return Promise.resolve();
+  return baixarHoje(ver.hoje.versao).then(function (h) { L.HOJE_J = h; L.HOJE_VERSAO = ver.hoje.versao; })
+    .catch(function (e) { console.warn("Pacote do dia indisponível; segue a carga:", e); });
+}
+function montar() {
+  var J = mesclar(L.BASE_J, L.HOJE_J);
+  L.AO_VIVO = J !== L.BASE_J;
+  preparar(J, L.BASE_VERSAO + (L.AO_VIVO ? "+" + L.HOJE_VERSAO : ""));
+}
+/* Baixa o que mudou (pacote da carga e/ou do dia) e remonta. Devolve true se remontou. */
+L.atualizarAoVivo = function (ver) {
+  L.ULTIMA_VERSAO = ver; L.CONFERIDO_EM = new Date();
+  var mudouBase = !!(ver && ver.versao && ver.versao !== "calculado" && ver.versao !== L.BASE_VERSAO);
+  var mudouHoje = !!(ver && ver.hoje && ver.hoje.versao && ver.hoje.versao !== L.HOJE_VERSAO);
+  if (!mudouBase && !mudouHoje) return Promise.resolve(false);
+  var pb = !mudouBase ? Promise.resolve() : baixarPacote(ver.versao).then(function (pac) {
+    idbGravar({ versao: ver.versao, pacote: pac }); L.BASE_J = pac; L.BASE_VERSAO = ver.versao; L.ORIGEM = "banco";
+  });
+  return pb.then(function () { return pegarHoje(ver); }).then(function () { montar(); return true; });
+};
+
+function diaDe(iso) { return Math.round(Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 864e5); }
+/* listas de cadastro [código, ...]: o que vem no pacote do dia vale por cima */
+function porCodigo(base, extra) {
+  var m = new Map();
+  (base || []).forEach(function (r) { m.set(r[0], r); });
+  (extra || []).forEach(function (r) { m.set(r[0], r); });
+  return Array.from(m.values()).sort(function (a, b) { return a[0] - b[0]; });
+}
+function mesclar(J, H) {
+  if (!J || !H || !H.meta || !H.ev || !H.inv || !H.est) return J;
+  // pacote do dia mais velho que o da carga (agente parado há tempo): vale a carga
+  if (J.meta.gerado_em && H.meta.gerado_em && new Date(H.meta.gerado_em) <= new Date(J.meta.gerado_em)) return J;
+  var offD = diaDe(H.meta.base) - diaDe(J.meta.base), offT = offD * 1440, corte = H.meta.corte_t + offT;
+
+  // movimentos: os da carga antes do corte (vêm em ordem de tempo) + os do dia
+  var E = J.ev, h = H.ev, t = 0, nb = 0;
+  while (nb < E.n && t + E.dt[nb] < corte) { t += E.dt[nb]; nb++; }
+  var ev = { n: nb + h.n, dt: E.dt.slice(0, nb) };
+  ["f", "p", "u", "m", "k", "q", "a", "d"].forEach(function (c) { ev[c] = E[c].slice(0, nb).concat(h[c]); });
+  for (var j = 0, ultimo = t; j < h.n; j++) { var tt = h.t[j] + offT; ev.dt.push(tt - ultimo); ultimo = tt; }
+
+  // inventário: a linha do dia substitui a da carga (inventário, filial, produto); ordem por data, nº, produto
+  var I = J.inv, HI = H.inv, doDia = new Set(), linhas = [];
+  for (j = 0; j < HI.n; j++) doDia.add(HI.i[j] + "|" + HI.f[j] + "|" + HI.p[j]);
+  for (var k = 0; k < I.n; k++) if (!doDia.has(I.i[k] + "|" + I.f[k] + "|" + I.p[k])) linhas.push([I.dd[k], I.i[k], I.p[k], 0, k]);
+  for (j = 0; j < HI.n; j++) linhas.push([HI.dd[j] == null ? null : HI.dd[j] + offD, HI.i[j], HI.p[j], 1, j]);
+  linhas.sort(function (a, b) { return ((a[0] == null) - (b[0] == null)) || (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2]); });
+  var CI = ["i", "f", "p", "dd", "tc", "ta", "uc", "ua", "qc", "qs", "c", "aj", "v", "s"], inv = { n: linhas.length };
+  CI.forEach(function (c) { inv[c] = new Array(linhas.length); });
+  linhas.forEach(function (l, x) {
+    var src = l[3] ? HI : I, y = l[4];
+    CI.forEach(function (c) {
+      var v = src[c][y];
+      if (l[3] && v != null) { if (c === "dd") v += offD; else if (c === "tc" || c === "ta") v += offT; }
+      inv[c][x] = v;
+    });
+  });
+
+  // posição: a do dia, inteira
+  var S = H.est, est = { n: S.n, f: S.f, p: S.p, e: S.e, b: S.b, a: S.a, r: S.r, c: S.c,
+                         ue: offD ? S.ue.map(function (x) { return x == null ? null : x + offD; }) : S.ue };
+
+  return {
+    meta: Object.assign({}, J.meta, { ult_mov: H.meta.ult_mov || J.meta.ult_mov, ult_inv: H.meta.ult_inv || J.meta.ult_inv,
+                                      ao_vivo: H.meta.gerado_em, desde_vivo: H.meta.desde }),
+    filiais: porCodigo(J.filiais, H.filiais), motivos: porCodigo(J.motivos, H.motivos), funcs: porCodigo(J.funcs, H.funcs),
+    produtos: porCodigo(J.produtos, H.produtos), fornecedores: porCodigo(J.fornecedores, H.fornecedores),
+    deptos: porCodigo(J.deptos, H.deptos), secoes: porCodigo(J.secoes, H.secoes),
+    fotos: Array.from(new Set((J.fotos || []).concat(H.fotos || []))),
+    ev: ev, inv: inv, est: est,
+  };
+}
+
+/* ------------------------------ botão Atualizar: a ponte até o agente ------------------------------ */
+/* O painel não fala com o WinThor: deixa um pedido no banco, o agente (dentro da rede) é
+   avisado na hora, lê o WinThor e responde no mesmo pedido. */
+L.pedirAtualizacao = function () {
+  return fetch("api/atualizar", { method: "POST", cache: "no-store" }).then(function (r) {
+    if (r.status === 404) return { agente: false, mensagem: "Este painel ainda não tem a ponte com o agente." };
+    return r.ok ? r.json() : erroHttp(r, "o pedido de atualização");
+  });
+};
+L.esperarPedido = function (id, limiteMs) {
+  var fim = Date.now() + (limiteMs || 45000);
+  return new Promise(function (ok, falha) {
+    (function olhar() {
+      fetch("api/versao?pedido=" + encodeURIComponent(id) + "&_=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : erroHttp(r, "o pedido de atualização"); })
+        .then(function (v) {
+          var p = v.pedido;
+          if (p && /^(atendido|erro|expirado)$/.test(p.status)) return ok(v);
+          if (Date.now() > fim) { v.pedido = Object.assign({}, p || {}, { status: "demorou" }); return ok(v); }
+          setTimeout(olhar, 700);
+        }, falha);
+    })();
+  });
+};
 
 /* ------------------------------ preparo das estruturas ------------------------------ */
 function idx(lista) { var m = new Map(); lista.forEach(function (x, i) { m.set(x[0], i); }); return m; }

@@ -42,6 +42,7 @@ function rodape() {
   L.$("menu-rodape").innerHTML =
     '<div><span class="vivo"></span><b>Movimentos até ' + L.esc(M.ult_mov ? L.fDataHora(M.ult_mov) : "—") + "</b></div>" +
     "<div>Último inventário: " + L.esc(M.ult_inv ? L.fDataHora(M.ult_inv) : "—") + "</div>" +
+    (L.AO_VIVO ? "<div>Desde ontem, do WinThor pelo agente · dado novo às " + L.esc(hhmmss(M.ao_vivo)) + "</div>" : "") +
     "<div>Carga de " + L.esc(L.fDataHora(M.carga || M.gerado_em)) + (L.ORIGEM === "copia" ? " · cópia deste computador" : L.ORIGEM === "offline" ? " · <b>sem conexão</b>" : "") + "</div>" +
     "<div>" + L.fInt(L.EV.n) + " movimentos · " + L.fInt(L.IV.n) + " contagens</div>" +
     '<div class="versao">versão ' + L.esc(window.VERSAO || "") + "</div>";
@@ -140,12 +141,88 @@ function apresentar(on) {
   setTimeout(L.redesenharTudo, 120);
 }
 function navegarPaginas(d) { var i = L.ordemPaginas.indexOf(L.estado.pagina) + d; if (i >= 0 && i < L.ordemPaginas.length) L.irPara(L.ordemPaginas[i]); }
-function atualizarDados() {
-  var b = L.$("btn-atualizar"); b.classList.add("girando");
+
+/* ------------------------------ ao vivo (AGENTE LUBE) ------------------------------ */
+/* De 15 em 15 s, com a aba à vista, o painel pergunta se há dado novo (/api/versao). Se o agente
+   montou um pacote do dia novo (ou saiu a carga de 2 em 2 horas), baixa só ele e redesenha a tela
+   sem animar, no mesmo filtro e período. Com relatório ou lista aberta, espera fechar. */
+var AO_VIVO_MS = 15000, vivoOcupado = false;
+function hhmmss(iso) { return iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""; }
+function horaCurta(iso) { return iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"; }
+function mostrarVivo() {
+  var el = L.$("ao-vivo"); if (!el) return;
+  var v = L.ULTIMA_VERSAO || {}, vivo = !!(L.AO_VIVO && v.agente && v.agente.vivo), M = L.META;
+  el.classList.toggle("on", vivo);
+  el.querySelector("b").textContent = vivo ? "Ao vivo · " + hhmmss(L.CONFERIDO_EM) : L.AO_VIVO ? "WinThor às " + hhmmss(M.ao_vivo) : "Carga das " + horaCurta(M.carga || M.gerado_em);
+  el.title = vivo
+    ? "O AGENTE LUBE lê o WinThor de segundos em segundos e a tela muda sozinha. Conferido às " + hhmmss(L.CONFERIDO_EM) + "; último dado novo às " + hhmmss(M.ao_vivo) + "."
+    : "O agente do WinThor não está ligado: o painel mostra " + (L.AO_VIVO ? "o que ele leu às " + hhmmss(M.ao_vivo) : "a carga agendada (de 2 em 2 horas)") + " e pega a próxima sozinho.";
+}
+function podeAplicar() { return !(L.dossieAberto && L.dossieAberto()) && !document.querySelector(".pop"); }
+function redesenharAoVivo() {
+  L.semAnimar = true; document.body.classList.add("sem-animar");
+  rodape(); mostrarVivo(); L.construirFiltros(); renderizar();
+  clearTimeout(redesenharAoVivo.t);
+  redesenharAoVivo.t = setTimeout(function () { L.semAnimar = false; document.body.classList.remove("sem-animar"); }, 1500);
+}
+function cicloAoVivo() {
+  if (vivoOcupado || document.hidden || !L.EV || L.$("btn-atualizar").classList.contains("girando")) return;
+  vivoOcupado = true;
   L.versaoNoBanco().then(function (v) {
-    if (v.versao !== L.META.versao) { L.toast("Há dados novos (carga das " + L.fDataHora(v.gerado_em) + ") — carregando…", "ok"); setTimeout(function () { location.reload(); }, 700); }
-    else { b.classList.remove("girando"); L.toast("Já está na carga mais recente (" + L.fDataHora(v.gerado_em) + "). A próxima carga sai sozinha, no horário agendado.", "ok"); }
-  }).catch(function (e) { b.classList.remove("girando"); L.toast("Não foi possível consultar a carga: " + (e.message || e), "erro"); });
+    if (!podeAplicar()) { L.ULTIMA_VERSAO = v; L.CONFERIDO_EM = new Date(); mostrarVivo(); return; }
+    return L.atualizarAoVivo(v).then(function (mudou) { if (mudou) redesenharAoVivo(); else mostrarVivo(); });
+  }).catch(function (e) {
+    console.warn("Ao vivo: não consegui perguntar a versão", e);
+    var el = L.$("ao-vivo"); if (el) { el.classList.remove("on"); el.querySelector("b").textContent = "Sem conexão"; }
+  }).then(function () { vivoOcupado = false; });
+}
+
+/* ------------------------------ botão Atualizar: pede ao agente uma leitura agora ------------------------------ */
+var ROTULOS_PEDIDO = [
+  ["inventario.bloqueio", "movimento novo no livro de bloqueio", "movimentos novos no livro de bloqueio", "novas"],
+  ["inventario.recebimento", "linha nova de recebimento", "linhas novas de recebimento", "novas"],
+  ["inventario.posicao", "posição de estoque mudou", "posições de estoque mudaram", "todas"],
+  ["inventario.inventario", "contagem mudou", "contagens mudaram", "todas"],
+];
+function textoPedido(p) {
+  p = p || {};
+  if (p.status === "demorou") return "O agente ainda está lendo o WinThor; a tela muda sozinha assim que terminar.";
+  if (p.status !== "atendido") return "O agente não conseguiu ler o WinThor agora" + (p.mensagem ? ": " + p.mensagem : ".");
+  var d = p.detalhe || {}, partes = [], seg = p.segundos != null ? " (" + L.fNum(p.segundos, 1) + " s)" : "";
+  ROTULOS_PEDIDO.forEach(function (r) {
+    var x = d[r[0]]; if (!x) return;
+    var n = r[3] === "novas" ? x.novas : x.novas + x.alteradas + x.apagadas;
+    if (n > 0) partes.push(L.fInt(n) + " " + (n === 1 ? r[1] : r[2]));
+  });
+  return "WinThor lido agora" + seg + ": " + (partes.length ? partes.join(", ") + "." : "nada mudou, o painel já estava em dia.");
+}
+function atualizarDados() {
+  var b = L.$("btn-atualizar");
+  if (b.classList.contains("girando")) return;
+  b.classList.add("girando");
+  var fim = function () { b.classList.remove("girando"); };
+  L.pedirAtualizacao().then(function (r) {
+    if (!r || !r.agente) return atualizarPelaCarga(r && r.mensagem).then(fim);
+    L.toast("Lendo o WinThor agora…", "ok");
+    return L.esperarPedido(r.pedido, 45000).then(function (v) {
+      return L.atualizarAoVivo(v).then(function (mudou) {
+        if (mudou) redesenharAoVivo(); else mostrarVivo();
+        fim();
+        L.toast(textoPedido(v.pedido), v.pedido && v.pedido.status === "atendido" ? "ok" : "erro");
+      });
+    });
+  }).catch(function (e) { fim(); L.toast("Não foi possível atualizar: " + (e.message || e), "erro"); });
+}
+/* sem o agente: o jeito de antes, a carga agendada (agora sem recarregar a página) */
+function atualizarPelaCarga(motivo) {
+  return L.versaoNoBanco().then(function (v) {
+    if (v.versao !== L.BASE_VERSAO) {
+      L.toast((motivo ? motivo + " " : "") + "Há uma carga nova (" + L.fDataHora(v.gerado_em) + "): carregando…", "ok");
+      return L.atualizarAoVivo(v).then(function (mudou) { if (mudou) redesenharAoVivo(); });
+    }
+    mostrarVivo();
+    L.toast((motivo ? motivo + " " : "") + "O painel está na carga das " + L.fDataHora(v.gerado_em) + "; a próxima sai sozinha, no horário agendado.", "ok");
+  });
 }
 
 /* ------------------------------ início ------------------------------ */
@@ -185,6 +262,9 @@ function iniciar() {
     }
     L.construirFiltros(); marcarMenu();
     renderizar();
+    mostrarVivo();
+    setInterval(cicloAoVivo, AO_VIVO_MS);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) cicloAoVivo(); });
   }).catch(function (e) {
     console.error(e);
     L.limpar(cont).appendChild(L.erroTela("Não foi possível carregar os dados", (e && e.message) || String(e)));

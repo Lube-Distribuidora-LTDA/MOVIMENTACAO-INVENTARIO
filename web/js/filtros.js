@@ -148,7 +148,9 @@ L.construirFiltros = function () {
     box.appendChild(seg);
     box.appendChild(L.h("button", { class: "fx-btn fx-datas", type: "button", id: "fx-datas", onclick: function (ev) { abrirDatas(ev.currentTarget); } }, L.icEl("calendario"), L.h("span", { class: "rot-per" })));
   } else {
-    box.appendChild(L.h("span", { class: "fx-hoje", html: L.ic("relogio") + " Posição de hoje · carga de " + L.esc(L.fDataHora(L.META.carga || L.META.gerado_em)) }));
+    box.appendChild(L.h("span", { class: "fx-hoje", html: L.ic("relogio") + (L.AO_VIVO
+      ? " Posição de hoje · do WinThor às " + L.esc(new Date(L.META.ao_vivo).toLocaleTimeString("pt-BR"))
+      : " Posição de hoje · carga de " + L.esc(L.fDataHora(L.META.carga || L.META.gerado_em))) }));
   }
   (pag.filtros || []).forEach(function (chave) {
     box.appendChild(L.h("button", { class: "fx-btn", type: "button", "data-k": chave, onclick: function (ev) { abrir(chave, ev.currentTarget); } },

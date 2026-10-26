@@ -27,9 +27,11 @@ etl/        carga (Python)
 web/        painel
   index.html, css/, js/     telas (o navegador filtra e soma tudo)
   api/dados.js              entrega o pacote comprimido guardado no banco
-  api/versao.js             diz qual pacote está no banco (o navegador só baixa se mudou)
+  api/versao.js             o que há de novo: pacote da carga, pacote do dia, agente ligado, pedido do Atualizar
+  api/hoje.js               entrega o pacote do dia (montado pelo AGENTE LUBE), comprimido
+  api/atualizar.js          botão Atualizar: pede ao agente uma leitura do WinThor agora (POST)
   api/img.js                foto do produto (miniatura que o Gestão Comercial já guarda)
-  db/                       migrações do schema `inventario` (01 a 07; 01 e 02 são a definição vigente das tabelas, views e função)
+  db/                       migrações do schema `inventario` (01 a 08; 01 e 02 são a definição vigente das tabelas, views e função)
   servidor_local.js         abre o painel no computador, contra o banco de verdade
   middleware.ts + sentinela-guarda.ts   guarda da Sentinela (só entra quem tem acesso pelo Painel Lube)
 INICIAR.bat  abre o painel nesta máquina (http://localhost:3102)
@@ -46,6 +48,7 @@ INICIAR.bat  abre o painel nesta máquina (http://localhost:3102)
 | `produto`, `funcionario`, `motivo`, `filial` | cadastros | upsert |
 | `controle_carga` | um registro por passo de cada carga | — |
 | `painel_cache` | o pacote do painel, comprimido (gzip) | refeito em toda carga |
+| `painel_hoje_cache` | o pacote do dia (texto JSON; a API comprime) | refeito pelo AGENTE LUBE depois de gravar |
 
 Toda tabela com **RLS ligado e sem políticas**: a chave pública não lê nada.
 
@@ -99,6 +102,15 @@ Tipos no painel: bloqueio manual, bloqueio por avaria, avaria registrada, desblo
 Telas: **Visão geral** · **Bloqueios e avarias** (266) · **Recebimento e devoluções** (1301, 1303/1346/1361 e WMS: o tempo de armazenagem do recebimento e o tempo até o WMS liberar cada devolução) · **Bloqueado hoje** (com "há quanto tempo está bloqueado") · **Inventário rotativo** (1147: acurácia, sobra, falta, quem contou, produtos que sempre divergem) · **Análise livre** (linhas × colunas × medida, em movimentos, inventário ou bloqueado) · **Movimentações** (linha a linha).
 
 No padrão da casa: filtros de múltipla escolha com busca (vazio = todos), períodos rápidos e datas livres, comparação com o período anterior e o ano anterior, **todo clique abre o relatório do recorte** (com Voltar; Ctrl+clique filtra), foto do produto, Excel formatado com os filtros escritos, link da visão, tema claro/escuro, modo apresentação (F).
+
+### Ao vivo e o botão Atualizar (AGENTE LUBE, desde 2026-10-26)
+
+O **AGENTE LUBE** (`Desktop\BI\22. AGENTE LUBE`, na `SRV-IA`) lê o WinThor de segundos em segundos e grava só a diferença nas tabelas deste schema. Depois de gravar, roda `inventario.atualizar_painel_hoje()` (`db/08-painel-hoje.sql`), que monta o **pacote do dia** — movimentos de ontem e hoje, posição inteira, inventários de 30 dias, no mesmo formato do pacote da carga — no máximo de 10 em 10 s (~110 ms, ~100 KB comprimido).
+
+- **A tela muda sozinha.** De 15 em 15 s, com a aba à vista, o painel pergunta `/api/versao`; se o pacote do dia mudou, baixa só ele (`/api/hoje`) e soma ao da carga: até anteontem vale a carga, de ontem em diante o do dia. Redesenha sem animar, no mesmo filtro e período; com relatório ou lista aberta, espera fechar. A carga de 2 em 2 horas também entra sozinha, sem recarregar a página.
+- **O botão Atualizar é a ponte.** `/api/atualizar` grava um pedido (`agente.pedir_atualizacao`, que avisa o agente por `NOTIFY`); o agente lê o WinThor na hora, monta o pacote e responde em `agente.pedido` com o que mudou. O painel mostra "WinThor lido agora (1,5 s): 20 posições de estoque mudaram". O painel nunca fala com o Oracle.
+- **Sem o agente,** tudo é como antes: indicador cinza "Carga das HH:MM", e o Atualizar avisa e confere a carga.
+- Indicador ao lado do Atualizar: verde **"Ao vivo · hh:mm:ss"** com o agente ligado.
 
 ## Rodar
 
