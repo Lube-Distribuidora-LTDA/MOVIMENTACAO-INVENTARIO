@@ -102,7 +102,9 @@ L.kpis = function () { var g = L.h("div", { class: "kpis" }); for (var i = 0; i 
 /* esperas: o caminhão da Lube (o mesmo desenho do portal) rodando, com painéis caindo no baú.
    Os painéis ficam ATRÁS do baú no desenho, então ao descer eles somem para dentro dele. */
 var camUid = 0;
-function caminhaoSVG() {
+/* foto = true: o caminhão é a foto do painel corporativo (a mesma do vídeo do Lube Online: caminhao-lube.webp);
+   foto = false: o desenho em SVG, só de reserva se a foto não carregar. */
+function caminhaoSVG(foto) {
   var N = "#1E2B8C", R = "#EE1B24", C = "#00A0E9", u = "cam" + (++camUid);
   var marca = '<g transform="translate(20,0) skewX(-10)"><path fill="NAVY" d="M24 6h34v56h42c6 0 10 4 10 10v12c0 10-8 18-18 18H24C12 102 4 94 4 82V26C4 14 12 6 24 6Z"/><path fill="RED" d="M68 6h36c6 0 10 4 10 10v32c0 3-2 4-5 4H68Z"/></g>';
   var m = function (navy) { return marca.replace("NAVY", navy).replace("RED", R); };
@@ -122,7 +124,7 @@ function caminhaoSVG() {
       '<rect x="38" y="' + (52 - h[2]) + '" width="10" height="' + h[2] + '" rx="2" style="fill:var(--verm-lt)"/>' +
       '<path d="M56 46L66 36L76 40L87 22" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--azul-lt)"/></g></g>';
   };
-  var pulso = function (x, d) { return '<ellipse class="cam-pulso" cx="' + x + '" cy="64" rx="34" ry="6" fill="none" stroke-width="2" style="stroke:var(--ouro);--d:' + d + 's"/>'; };
+  var pulso = function (x, d) { return '<ellipse class="cam-pulso" cx="' + x + '" cy="' + (foto ? 44 : 64) + '" rx="34" ry="6" fill="none" stroke-width="2" style="stroke:var(--ouro);--d:' + d + 's"/>'; };
   return '<svg viewBox="0 -96 700 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Caminhão da Lube carregando os painéis">' +
     '<defs><linearGradient id="' + u + 'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3BC4F9"/><stop offset="55%" stop-color="' + C + '"/><stop offset="100%" stop-color="#0084C6"/></linearGradient>' +
     '<linearGradient id="' + u + 'c" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="70%" stop-color="#F0F3F8"/><stop offset="100%" stop-color="#C9D2E0"/></linearGradient></defs>' +
@@ -133,6 +135,7 @@ function caminhaoSVG() {
     '<g transform="translate(0,0)">' + painel(110, 0, [16, 28, 22]) + painel(250, 1.2, [24, 14, 30]) + painel(344, 2.4, [20, 32, 12]) + '</g>' +
     // vento vermelho atrás, como no portal
     '<g class="cam-vento"><line x1="-6" y1="150" x2="40" y2="150" stroke="' + R + '" stroke-width="3" stroke-linecap="round"/><line x1="-20" y1="176" x2="34" y2="176" stroke="' + R + '" stroke-width="3" stroke-linecap="round"/><line x1="-2" y1="202" x2="30" y2="202" stroke="' + R + '" stroke-width="3" stroke-linecap="round"/></g>' +
+    (foto ? '<g class="cam-corpo"><ellipse cx="350" cy="286" rx="310" ry="8" fill="rgba(0,0,0,.35)"/><image href="caminhao-lube.webp" x="30" y="26" width="640" height="259" preserveAspectRatio="xMidYMid meet"/></g>' :
     '<g transform="translate(25,38)"><g class="cam-corpo">' +
       '<ellipse cx="325" cy="238" rx="300" ry="9" fill="rgba(0,0,0,.35)"/>' +
       '<rect x="18" y="26" width="404" height="158" fill="url(#' + u + 'b)"/><rect x="18" y="26" width="404" height="9" fill="#DCE3EC"/>' +
@@ -149,7 +152,7 @@ function caminhaoSVG() {
       '<rect x="586" y="146" width="14" height="26" rx="3" fill="#FFC24D"/><rect x="424" y="196" width="180" height="18" fill="#232C42"/>' +
       '<rect x="18" y="206" width="406" height="12" fill="#1A2238"/><rect x="252" y="160" width="96" height="46" rx="10" fill="#AEB8C7"/><rect x="252" y="160" width="96" height="8" rx="4" fill="#D6DEE9"/>' +
       rodas +
-    '</g></g>' +
+    '</g></g>') +
     // brilho no topo do baú quando o painel entra
     pulso(110 + 48, 0) + pulso(250 + 48, 1.2) + pulso(344 + 48, 2.4) +
   '</svg>';
@@ -157,7 +160,10 @@ function caminhaoSVG() {
 L.espera = function (texto) {
   var t0 = performance.now();
   var rel = L.h("div", { class: "relogio num", text: "0,0 s" });
-  var cena = L.h("div", { class: "cam-cena", html: caminhaoSVG() });
+  var cena = L.h("div", { class: "cam-cena", html: caminhaoSVG(true) });
+  var sonda = new Image();                                  // se a foto não carregar, volta para o desenho
+  sonda.onerror = function () { cena.innerHTML = caminhaoSVG(false); };
+  sonda.src = "caminhao-lube.webp";
   var el = L.h("div", { class: "espera" }, cena, L.h("div", { class: "espera-txt" }, L.h("div", { text: texto || "Calculando a visão…" }), rel));
   var id = setInterval(function () { if (!el.isConnected) return clearInterval(id); rel.textContent = L.fNum((performance.now() - t0) / 1000, 1) + " s"; }, 100);
   return el;
